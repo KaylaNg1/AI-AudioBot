@@ -65,12 +65,28 @@ p span:first-child{
   display: none;
 }
 
+.userInpt{
+  padding:10px;
+  width:100%;
+  display:flex;
+}
+
+.image, form{
+  /* float:left; */
+  display:inline-block;
+}
+
+#mic{
+  object-fit:cover;
+  height: 2.5em;
+}
+
 form{
-  text-align: center;
   position: sticky;
   bottom: 0;
   background-color:#4B244A;
   padding-bottom:10px;
+  width: 90%;
 }
 
 input{
@@ -86,3 +102,5 @@ input{
 input:focus{
   outline: none;
 }
+
+/* audio features */
