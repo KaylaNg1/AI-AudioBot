@@ -12,8 +12,6 @@ app.use(cors());
 
 // setting up open AI
 const openai = new OpenAI(({
-  organization: "org-oM5spZlmy4YszZuE58VIQwpP",
-  apiKey: "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"
 }));
 
 // setting up server
