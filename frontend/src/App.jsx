@@ -3,6 +3,90 @@ import mic from "./assets/mic.png";
 
 import Modal from "./components/Modal"
 
+// Audio Variables
+export let mediaRecorder;
+export let mediaStream;
+export let recordedChunks;
+
+// Function to handle recording and saving the audio
+export function startRecording() {
+  // Clear the recordedChunks array for future recordings
+  recordedChunks = [];
+  navigator.mediaDevices.getUserMedia({ audio: true }) // returns promise of requested media
+    .then((stream) => { // takes successful media stream
+      // Create a MediaRecorder object and assign the stream to it
+      mediaRecorder = new MediaRecorder(stream);
+
+      // Store the MediaStream object
+      mediaStream = stream;
+
+      // Event listener for data available during recording
+      mediaRecorder.ondataavailable = (event) => {
+        recordedChunks.push(event.data);
+      };
+
+      // Event listener for stopping the recording
+      mediaRecorder.onstop = (e) => {
+        // Combine the recorded chunks into a single Blob ( or chunk of data )
+        let recordedBlob = new Blob(recordedChunks, { type: "audio/wav" });
+
+        // Show a message to indicate recording has stopped
+        // alert('Recording stopped. Click "Save Audio" to save the recording.');
+
+        // Call the function to handle saving the audio
+        saveAudio(recordedBlob);
+      };
+
+      // Start recording
+      mediaRecorder.start();
+
+      // Show a message to indicate recording has started
+      // alert('Recording voice... Click "Stop" to stop recording.');
+    })
+    .catch(function (error) {
+      console.error("Error accessing user media:", error);
+    });
+};
+
+// Function to handle saving the audio to the server using Ajax
+export function saveAudio(audioBlob) {
+  console.log(audioBlob);
+  const formData = new FormData(); //creates set of key/val pairs
+  formData.append("audio", audioBlob, "recorded_audio.wav"); // name, val, filename
+  console.log("Saving Audio");
+  console.log(formData);
+  fetch( "http://localhost:8000/speechToText", {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
+    body: JSON.stringify(formData),
+  })
+  .then((response) => {
+    console.log(response.json());
+    return response.json()
+  })
+  .catch((e) => {
+    console.log(e);
+  })
+  ;
+  // success: function (data) {
+  //   const { status, result } = data;
+  //   if (status == "success") {
+  //     $("#userInput").val(result);
+  //   } else {
+  //     console.log(result);
+  //     alert("Something went wrong. Please try again.");
+  //   }
+  // },
+  // error: function (error) {
+  //   alert("Something went wrong. Please try again.");
+  //   console.error("Error saving audio file:", error);
+  // },
+};
+
 // basis of the react app
 function App() {
   // create states
@@ -17,6 +101,7 @@ function App() {
   const [isOpen, setIsOpen] = useState(false);
 
   // chat object
+  // will display the Chat Bot generated message onto the UI
   const chat = async (e, message) => {
     // prevent page from reloading
     e.preventDefault();
@@ -39,7 +124,8 @@ function App() {
     fetch("http://localhost:8000/", {
       method: "POST",
       headers: {
-        "Content-type": "application/json"
+        "Content-type": "application/json",
+        "Access-Control-Allow-Origin": "*"
       },
       body: JSON.stringify({
         chats,
@@ -55,75 +141,6 @@ function App() {
       .catch((error) =>
         console.log(error)
       );
-  }
-
-  // AUDIO FUNCTIONS
-
-  // Function to handle recording and saving the audio
-  function getAudio() {
-    // Clear the recordedChunks array for future recordings
-    let recordedChunks = [];
-    navigator.mediaDevices.getUserMedia({ audio: true }) // returns promise of requested media
-      .then((stream) => { // takes successful media stream
-        // Create a MediaRecorder object and assign the stream to it
-        mediaRecorder = new MediaRecorder(stream);
-
-        // Store the MediaStream object
-        mediaStream = stream;
-
-        // Event listener for data available during recording
-        mediaRecorder.ondataavailable = (event) => {
-          recordedChunks.push(event.data);
-        };
-
-        // Event listener for stopping the recording
-        mediaRecorder.onstop = (e) => {
-          // Combine the recorded chunks into a single Blob ( or chunk of data )
-          const recordedBlob = new Blob(recordedChunks, { type: "audio/wav" });
-
-          // Show a message to indicate recording has stopped
-          // alert('Recording stopped. Click "Save Audio" to save the recording.');
-
-          // Call the function to handle saving the audio
-          saveAudio(recordedBlob);
-        };
-
-        // Start recording
-        mediaRecorder.start();
-
-        // Show a message to indicate recording has started
-        // alert('Recording voice... Click "Stop" to stop recording.');
-      })
-      .catch(function (error) {
-        console.error("Error accessing user media:", error);
-      });
-  }
-
-  // Function to handle saving the audio to the server using Ajax
-  function saveAudio(audioBlob) {
-    const formData = new FormData(); //creates set of key/val pairs
-    formData.append("audio", audioBlob, "recorded_audio.wav"); // name, val, filename
-
-    $.ajax({
-      type: "POST",
-      url: "/speech-to-text",
-      data: formData,
-      processData: false,
-      contentType: false,
-      success: function (data) {
-        const { status, result } = data;
-        if (status == "success") {
-          $("#userInput").val(result);
-        } else {
-          console.log(result);
-          alert("Something went wrong. Please try again.");
-        }
-      },
-      error: function (error) {
-        alert("Something went wrong. Please try again.");
-        console.error("Error saving audio file:", error);
-      },
-    });
   }
 
   return (
@@ -156,13 +173,13 @@ function App() {
           <input type="text"
             name="message"
             value={message}
-            placeholder="Type a message and hit enter"
+            placeholder="Type a message and hit enter or press the mic to record"
             onChange={(e) => setMessage(e.target.value)}
           />
         </form>
         <div className="image">
           <button onClick={() => setIsOpen(true)}>
-            <img id = "mic" src = {mic}></img>
+            <img id="mic" src={mic}></img>
           </button>
         </div>
       </div>
